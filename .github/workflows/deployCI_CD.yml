@@ -28,11 +28,11 @@ jobs:
           
           # FIX: Removed the '#' comments from inside the command. 
           # Now including the deployment folder as you requested.
-          databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} \
-            --overwrite \
-            --exclude ".github/*" \
-            --exclude ".git/*" \
-            --exclude "*.md"
+          databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} --overwrite
+          
+            # --exclude ".github/*" \
+            # --exclude ".git/*" \
+            # --exclude "*.md"
           
           # # This command maps your Git Root directly to the Production Shared folder
           # databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} \
