@@ -29,7 +29,7 @@ jobs:
           # Now including the deployment folder as you requested.
           # 2. Specifically upload ONLY the folders you want
           # This avoids .git, .github, and .databricksignore entirely
-          databricks workspace import-dir ./notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
+          databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
           # databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
 
 
