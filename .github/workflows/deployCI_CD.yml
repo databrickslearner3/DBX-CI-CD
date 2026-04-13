@@ -20,8 +20,8 @@ jobs:
       - name: Upload Notebooks to Production
         run: |
           # Use the Secrets and Variables we set up
-          export DATABRICKS_HOST=${{ secrets.PROD_DB_HOST }}
-          export DATABRICKS_TOKEN=${{ secrets.PROD_DB_TOKEN }}
+          export DATABRICKS_HOST=${{ secrets.PROD_DBX_HOST }}
+          export DATABRICKS_TOKEN=${{ secrets.PROD_DBX_TOKEN }}
           
           # This command maps your Git Root directly to the Production Shared folder
           databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} \
