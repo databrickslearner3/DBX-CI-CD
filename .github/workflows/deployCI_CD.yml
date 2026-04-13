@@ -26,22 +26,41 @@ jobs:
           export DATABRICKS_HOST=${{ secrets.PROD_DBX_HOST }}
           export DATABRICKS_TOKEN=${{ secrets.PROD_DBX_TOKEN }}
           
-          # FIX: Removed the '#' comments from inside the command. 
           # Now including the deployment folder as you requested.
-          databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} --overwrite
+          # 2. Specifically upload ONLY the folders you want
+          # This avoids .git, .github, and .databricksignore entirely
+          databricks workspace import-dir ./notebooks ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
+          databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
           
-            # --exclude ".github/*" \
-            # --exclude ".git/*" \
-            # --exclude "*.md"
+          # databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} --overwrite
           
-          # # This command maps your Git Root directly to the Production Shared folder
-          # databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} \
-          #   --overwrite \
-          #   --exclude ".github/*" \
-          #   --exclude ".git/*" \
-          #   # --exclude "deployment/*" \
-          #   # --exclude "*.yml" \
-          #   --exclude "*.md"
+          #   # --exclude ".github/*" \
+          #   # --exclude ".git/*" \
+          #   # --exclude "*.md"
+          
+          # # # This command maps your Git Root directly to the Production Shared folder
+          # # databricks workspace import-dir . ${{ vars.PROD_WORKSPACE_PATH }} \
+          # #   --overwrite \
+          # #   --exclude ".github/*" \
+          # #   --exclude ".git/*" \
+          # #   # --exclude "deployment/*" \
+          # #   # --exclude "*.yml" \
+          # #   --exclude "*.md"
 
 
 # # This is a basic workflow to help you get started with Actions
