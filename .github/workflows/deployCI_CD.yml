@@ -36,7 +36,19 @@ jobs:
           # This grabs everything under 'CI_CD_Pipeline' and sends it to the API
           yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
           
-          databricks jobs create --json @job.json
+          # databricks jobs create --json @job.json
+          
+          # 4. Find the existing Job ID
+          JOB_ID=$(databricks jobs list --output json | jq -r '.jobs[] | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
+          
+          if [ ! -z "$JOB_ID" ]; then
+            echo "Updating existing Job ID: $JOB_ID"
+            # 'reset' updates the job but KEEPS the history
+            databricks jobs reset --job-id $JOB_ID --json @job.json
+          else
+            echo "Job not found. Creating new job..."
+            databricks jobs create --json @job.json
+          fi
 
 
 
