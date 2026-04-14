@@ -32,6 +32,12 @@ jobs:
           databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
           # databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
 
+          # 3. Convert your YAML to JSON on the fly and deploy it
+          # This grabs everything under 'CI_CD_Pipeline' and sends it to the API
+          yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
+          
+          databricks jobs create --json @job.json
+
 
 
 
