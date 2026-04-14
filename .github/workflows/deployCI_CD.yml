@@ -44,7 +44,7 @@ jobs:
           
           if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
             echo "Updating existing Job ID: $JOB_ID"
-            databricks jobs reset --job-id $JOB_ID --json @job.json
+            databricks jobs reset $JOB_ID --json @job.json
           else
             echo "Job not found. Creating new job..."
             databricks jobs create --json @job.json
