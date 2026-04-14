@@ -36,7 +36,7 @@ jobs:
           databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
 
           # 3. Create the RAW JSON from YAML
-          yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
+          yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > raw_job.json
           
           # 4. Find the existing Job ID
           JOB_ID=$(databricks jobs list --output json | jq -r 'if type == "array" then .[] else .jobs[] end | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
@@ -44,13 +44,16 @@ jobs:
           # 5. Logic: Update existing job or Create new one
           if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
             echo "Updating existing Job ID: $JOB_ID"
-            # Syntax fix: 'update JOB_ID --json @file'
-            databricks jobs update $JOB_ID --json @job.json
+            
+            # Use jq to add the job_id into the JSON file itself
+            jq --arg id "$JOB_ID" '.job_id = ($id | tonumber)' raw_job.json > final_update.json
+            
+            # Now run update with ONLY the --json flag as requested by the CLI
+            databricks jobs update --json @final_update.json
           else
             echo "Job not found. Creating new job..."
-            databricks jobs create --json @job.json
+            databricks jobs create --json @raw_job.json
           fi
-
 
 # ###########################################################################################################################################
 # name: Production Notebook Deployment
