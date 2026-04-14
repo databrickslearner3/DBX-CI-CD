@@ -32,8 +32,7 @@ jobs:
           # 2. Create the RAW JSON from YAML
           yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > raw_job.json
           
-          # 3. Find the existing Job ID (Strict Exact Match)
-          # We list all jobs and filter for the exact name 'CI_CD_Pipeline'
+          # 3. Find the existing Job ID
           JOB_ID=$(databricks jobs list --output json | jq -r '.[] | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
           
           echo "Debug: Found Job ID: '$JOB_ID'"
@@ -42,8 +41,9 @@ jobs:
           if [ ! -z "$JOB_ID" ] && [ "$JOB_ID" != "null" ]; then
             echo "Updating existing Job: CI_CD_Pipeline (ID: $JOB_ID)"
             
-            # Inject the Job ID into the JSON (The CLI requires the ID inside the JSON for 'update')
-            jq --arg id "$JOB_ID" '.job_id = ($id | tonumber)' raw_job.json > final_update.json
+            # THE FIX: Wrap the fields in 'new_settings' and keep 'job_id' at the top level
+            jq -n --arg id "$JOB_ID" --slurpfile job raw_job.json \
+            '{"job_id": ($id | tonumber), "new_settings": $job[0]}' > final_update.json
             
             databricks jobs update --json @final_update.json
           else
