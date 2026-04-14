@@ -38,12 +38,12 @@ jobs:
           
           # databricks jobs create --json @job.json
           
-          # 4. Find the existing Job ID
-          JOB_ID=$(databricks jobs list --output json | jq -r '.jobs[] | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
+          # 4. Find the Job ID (Updated JQ logic to handle array format)
+          # This version works whether the output is an object or a direct array
+          JOB_ID=$(databricks jobs list --output json | jq -r 'if type == "array" then .[] else .jobs[] end | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
           
-          if [ ! -z "$JOB_ID" ]; then
+          if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
             echo "Updating existing Job ID: $JOB_ID"
-            # 'reset' updates the job but KEEPS the history
             databricks jobs reset --job-id $JOB_ID --json @job.json
           else
             echo "Job not found. Creating new job..."
