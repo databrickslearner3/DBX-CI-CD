@@ -30,7 +30,7 @@ jobs:
           # 2. Specifically upload ONLY the folders you want
           # This avoids .git, .github, and .databricksignore entirely
           databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
-          # databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
+          databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
 
           # # 3. Convert your YAML to JSON on the fly and deploy it
           # # This grabs everything under 'CI_CD_Pipeline' and sends it to the API
@@ -38,25 +38,21 @@ jobs:
           
           # # databricks jobs create --json @job.json
           
-          # 3. Create two JSON versions (one for Create, one for Reset)
-          # 'job_create.json' is the raw definition
-          yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job_create.json
+          # 3. Create the RAW JSON (No 'settings' wrapper needed for CLI reset)
+          yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
           
-          # 'job_reset.json' wraps the definition in "settings" (REQUIRED for reset)
-          yq eval '{"settings": .resources.jobs.CI_CD_Pipeline}' deployment/workflow_prod.yml -o=json > job_reset.json
-          
-          # 4. Find the existing Job ID
+          # 4. Find the Job ID
           JOB_ID=$(databricks jobs list --output json | jq -r 'if type == "array" then .[] else .jobs[] end | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
           
-          # 5. The Logic: Update if exists, Create if not
+          # 5. Logic: Use 'update' instead of 'reset'
+          # 'update' is more reliable for partial changes in the new CLI
           if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
             echo "Updating existing Job ID: $JOB_ID"
-            # Reset uses the wrapped JSON
-            databricks jobs reset $JOB_ID --json @job_reset.json
+            # Using 'update' with the --json flag is the most stable way
+            databricks jobs update --job-id $JOB_ID --json @job.json
           else
             echo "Job not found. Creating new job..."
-            # Create uses the raw JSON
-            databricks jobs create --json @job_create.json
+            databricks jobs create --json @job.json
           fi
 
 
