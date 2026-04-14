@@ -7,6 +7,8 @@ resources:
         - task_key: fsd1
           notebook_task:
             notebook_path: /Shared/fsd-integration/notebooks/fsd1/fsd1
+              base_parameters:
+                environement: "{{job.parameters.env}}"
             source: WORKSPACE
         - task_key: fsd2
           depends_on:
@@ -17,3 +19,8 @@ resources:
       queue:
         enabled: true
         performance_target: PERFORMANCE_OPTIMIZED
+
+      parameters:
+        - name: env
+          default: prod
+      performance_target: PERFORMANCE_OPTIMIZED
