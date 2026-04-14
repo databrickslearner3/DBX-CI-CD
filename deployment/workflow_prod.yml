@@ -25,6 +25,6 @@ resources:
       parameters:
         - name: env
           default: prod
-        - name: env
-          default: prod
+        - name: emp
+          default: 'test'
       performance_target: PERFORMANCE_OPTIMIZED
