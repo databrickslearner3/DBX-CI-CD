@@ -1,0 +1,19 @@
+# deployment/workflow_prod.yml
+resources:
+  jobs:
+    CI_CD_Pipeline:
+      name: CI_CD_Pipeline
+      tasks:
+        - task_key: fsd1
+          notebook_task:
+            notebook_path: /Shared/fsd-integration/notebooks/fsd1/fsd1
+            source: WORKSPACE
+        - task_key: fsd2
+          depends_on:
+            - task_key: fsd1
+          notebook_task:
+            notebook_path: /Shared/fsd-integration/notebooks/fsd2/fsd2
+            source: WORKSPACE
+      queue:
+        enabled: true
+        performance_target: PERFORMANCE_OPTIMIZED
