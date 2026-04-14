@@ -5,7 +5,6 @@ on:
     branches:
       - main
 
-# FIX: This removes the Node.js 20 deprecation warning
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
@@ -19,9 +18,7 @@ jobs:
 
       - name: Install Databricks CLI and yq
         run: |
-          # Install Databricks CLI
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
-          # Install yq for YAML processing
           sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
       - name: Upload Notebooks and Update Job
@@ -32,29 +29,27 @@ jobs:
           # 1. Upload Notebooks
           databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
           
-          # 2. Upload Deployment files
-          databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
-
-          # 3. Create the RAW JSON from YAML
+          # 2. Create the RAW JSON from YAML
           yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > raw_job.json
           
-          # 4. Find the existing Job ID
-          JOB_ID=$(databricks jobs list --output json | jq -r 'if type == "array" then .[] else .jobs[] end | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
+          # 3. Find the existing Job ID (Strict Exact Match)
+          # We list all jobs and filter for the exact name 'CI_CD_Pipeline'
+          JOB_ID=$(databricks jobs list --output json | jq -r '.[] | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
           
-          # 5. Logic: Update existing job or Create new one
-          if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
-            echo "Updating existing Job ID: $JOB_ID"
+          echo "Debug: Found Job ID: '$JOB_ID'"
+
+          # 4. Logic: Update if ID exists, otherwise Create
+          if [ ! -z "$JOB_ID" ] && [ "$JOB_ID" != "null" ]; then
+            echo "Updating existing Job: CI_CD_Pipeline (ID: $JOB_ID)"
             
-            # Use jq to add the job_id into the JSON file itself
+            # Inject the Job ID into the JSON (The CLI requires the ID inside the JSON for 'update')
             jq --arg id "$JOB_ID" '.job_id = ($id | tonumber)' raw_job.json > final_update.json
             
-            # Now run update with ONLY the --json flag as requested by the CLI
             databricks jobs update --json @final_update.json
           else
-            echo "Job not found. Creating new job..."
+            echo "Job 'CI_CD_Pipeline' not found. Creating fresh..."
             databricks jobs create --json @raw_job.json
           fi
-
 # ###########################################################################################################################################
 # name: Production Notebook Deployment
 
