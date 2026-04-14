@@ -17,45 +17,82 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v5
 
-      - name: Install Databricks CLI
+      - name: Install Databricks CLI and yq
         run: |
+          # Install Databricks CLI
           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+          # Install yq for YAML processing
+          sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
 
-      - name: Upload Notebooks to Production
+      - name: Upload Notebooks and Update Job
         run: |
           export DATABRICKS_HOST=${{ secrets.PROD_DBX_HOST }}
           export DATABRICKS_TOKEN=${{ secrets.PROD_DBX_TOKEN }}
           
-          # Now including the deployment folder as you requested.
-          # 2. Specifically upload ONLY the folders you want
-          # This avoids .git, .github, and .databricksignore entirely
+          # 1. Upload Notebooks
           databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
+          
+          # 2. Upload Deployment files
           databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
 
-          # # 3. Convert your YAML to JSON on the fly and deploy it
-          # # This grabs everything under 'CI_CD_Pipeline' and sends it to the API
-          # yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
-          
-          # # databricks jobs create --json @job.json
-          
-          # 3. Create the RAW JSON (No 'settings' wrapper needed for CLI reset)
+          # 3. Create the RAW JSON from YAML
           yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
           
-          # 4. Find the Job ID
+          # 4. Find the existing Job ID
           JOB_ID=$(databricks jobs list --output json | jq -r 'if type == "array" then .[] else .jobs[] end | select(.settings.name == "CI_CD_Pipeline") | .job_id' | head -n 1)
           
-          # 5. Logic: Use 'update' instead of 'reset'
-          # 'update' is more reliable for partial changes in the new CLI
+          # 5. Logic: Update existing job or Create new one
           if [ "$JOB_ID" != "null" ] && [ ! -z "$JOB_ID" ]; then
             echo "Updating existing Job ID: $JOB_ID"
-            # Using 'update' with the --json flag is the most stable way
-            databricks jobs update --job-id $JOB_ID --json @job.json
+            # Syntax fix: 'update JOB_ID --json @file'
+            databricks jobs update $JOB_ID --json @job.json
           else
             echo "Job not found. Creating new job..."
             databricks jobs create --json @job.json
           fi
 
 
+# ###########################################################################################################################################
+# name: Production Notebook Deployment
+
+# on:
+#   push:
+#     branches:
+#       - main
+
+# # FIX: This removes the Node.js 20 deprecation warning
+# env:
+#   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+# jobs:
+#   deploy-notebooks:
+#     runs-on: ubuntu-latest
+    
+#     steps:
+#       - name: Checkout Code
+#         uses: actions/checkout@v5
+
+#       - name: Install Databricks CLI
+#         run: |
+#           curl -fsSL https://raw.githubusercontent.com/databricks/setup-cli/main/install.sh | sh
+
+#       - name: Upload Notebooks to Production
+#         run: |
+#           export DATABRICKS_HOST=${{ secrets.PROD_DBX_HOST }}
+#           export DATABRICKS_TOKEN=${{ secrets.PROD_DBX_TOKEN }}
+          
+#           # Now including the deployment folder as you requested.
+#           # 2. Specifically upload ONLY the folders you want
+#           # This avoids .git, .github, and .databricksignore entirely
+#           databricks workspace import-dir ./fsd-integration/notebook ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/notebooks --overwrite
+#           databricks workspace import-dir ./deployment ${{ vars.PROD_WORKSPACE_PATH }}/fsd-integration/deployment --overwrite
+
+#           # # 3. Convert your YAML to JSON on the fly and deploy it
+#           # # This grabs everything under 'CI_CD_Pipeline' and sends it to the API
+#           # yq eval '.resources.jobs.CI_CD_Pipeline' deployment/workflow_prod.yml -o=json > job.json
+          
+#           # databricks jobs create --json @job.json
+###########################################################################################################################################
 
 
 
